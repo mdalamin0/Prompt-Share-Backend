@@ -22,20 +22,16 @@ const createPrompt = catchAsync(
   },
 );
 
-
 const getAllPublicPrompts = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const query = req.query;
 
-    const result = await promptServices.getAllPublicPrompts( query);
+    const result = await promptServices.getAllPublicPrompts(query);
 
-    sendResponse(
-      res,
-      {
-        message: "Public prompts fetched successfully.",
-        data: result
-      },
-    );
+    sendResponse(res, {
+      message: "Public prompts fetched successfully.",
+      data: result,
+    });
   },
 );
 
@@ -46,13 +42,77 @@ const getMyPrompts = catchAsync(
 
     const result = await promptServices.getMyPrompts(userId, query);
 
-    sendResponse(
-      res,
-      {
-        message: "My prompts fetched successfully.",
-        data: result
-      },
+    sendResponse(res, {
+      message: "My prompts fetched successfully.",
+      data: result,
+    });
+  },
+);
+
+const clonePromptToMyCollection = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id as string;
+    const { promptId } = req.params;
+
+    const result = await promptServices.clonePromptToMyCollection(
+      userId,
+      promptId as string,
     );
+
+    sendResponse(res, {
+      message: "Prompt successfully cloned to your collection.",
+      data: result,
+    });
+  },
+);
+
+const updatePrompt = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id as string;
+    const { promptId } = req.params;
+    const payload = req.body;
+
+    const result = await promptServices.updatePrompt(
+      userId,
+      promptId as string,
+      payload,
+    );
+
+    sendResponse(res, {
+      message: "Prompt updated successfully.",
+      data: result,
+    });
+  },
+);
+
+const togglePromptPrivacy = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id as string;
+    const { promptId } = req.params;
+
+    const result = await promptServices.togglePromptPrivacy(
+      userId,
+      promptId as string,
+    );
+
+    sendResponse(res, {
+      message: `Prompt visibility changed to ${result.isPublic ? "Public" : "Private"} successfully.`,
+      data: result,
+    });
+  },
+);
+
+const deletePrompt = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id as string;
+    const { promptId } = req.params;
+
+    await promptServices.deletePrompt(userId, promptId as string);
+
+    sendResponse(res, {
+      message: "Prompt deleted successfully.",
+      data: null,
+    });
   },
 );
 
@@ -60,4 +120,8 @@ export const promptControllers = {
   createPrompt,
   getAllPublicPrompts,
   getMyPrompts,
+  clonePromptToMyCollection,
+  updatePrompt,
+  togglePromptPrivacy,
+  deletePrompt,
 };
