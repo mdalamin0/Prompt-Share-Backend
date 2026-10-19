@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { promptControllers } from "./prompt.controller";
-import { createPromptValidationSchema } from "./prompt.validation";
+import { createPromptValidationSchema, updatePromptValidationSchema } from "./prompt.validation";
 import validateRequest from "../../middlewares/validateRequest";
 import { auth } from "../../middlewares/auth";
 import { Role } from "../../../generated/prisma/enums";
@@ -25,6 +25,26 @@ router.post(
   promptControllers.createPrompt,
 );
 
+router.post(
+  "/clone-prompt-to-my-collection/:promptId",
+  auth(Role.USER),
+  promptControllers.clonePromptToMyCollection,
+);
+
+router.patch(
+  "/:promptId",
+  auth(Role.USER),
+  validateRequest(updatePromptValidationSchema),
+  promptControllers.updatePrompt,
+);
+
+router.patch(
+  "/toggle-prompt-privacy/:promptId",
+  auth(Role.USER),
+  promptControllers.togglePromptPrivacy,
+);
+
+router.delete("/:promptId", auth(Role.USER), promptControllers.deletePrompt);
 
 
 export const promptRoutes = router;

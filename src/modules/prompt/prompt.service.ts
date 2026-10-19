@@ -1,7 +1,7 @@
 import AppError from "../../errors/AppError";
 import { prisma } from "../../lib/prisma";
 import httpStatus from "http-status";
-import { CreatePromptPayload, IPromptQuery } from "./prompt.interface";
+import { CreatePromptPayload, IPromptQuery, UpdatePromptPayload } from "./prompt.interface";
 import { Prisma, PromptCategory } from "../../../generated/prisma/client";
 
 const createPrompt = async (userId: string, payload: CreatePromptPayload) => {
@@ -211,8 +211,209 @@ const getMyPrompts = async (userId: string, query: IPromptQuery) => {
   };
 };
 
+const clonePromptToMyCollection = async (userId: string, promptId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is suspended.");
+  }
+
+  if (user.status === "DELETED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+  }
+
+  const originalPrompt = await prisma.prompt.findUnique({
+    where: { id: promptId },
+  });
+
+  if (!originalPrompt) {
+    throw new AppError(httpStatus.NOT_FOUND, "Original prompt not found!");
+  }
+
+  if (!originalPrompt.isPublic) {
+    throw new AppError(httpStatus.FORBIDDEN, "Private prompts cannot be cloned!");
+  }
+
+  if (originalPrompt.userId === userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, "You cannot clone your own prompt!");
+  }
+
+  const isAlreadyCloned = await prisma.prompt.findFirst({
+    where: {
+      userId,
+      OR: [
+        { title: `${originalPrompt.title} (Copied)` },
+        { template: originalPrompt.template }
+      ]
+    },
+  });
+
+  if (isAlreadyCloned) {
+    throw new AppError(httpStatus.CONFLICT, "You have already cloned this prompt to your collection!");
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.prompt.update({
+      where: { id: promptId },
+      data: { forkCount: { increment: 1 } },
+    });
+
+    const clonedPrompt = await tx.prompt.create({
+      data: {
+        title: `${originalPrompt.title} (Copied)`,
+        description: originalPrompt.description,
+        template: originalPrompt.template,
+        category: originalPrompt.category,
+        tags: originalPrompt.tags,
+        isPublic: true,
+        userId,
+      },
+    });
+
+    return clonedPrompt;
+  });
+
+  return result;
+};
+
+const updatePrompt = async (
+  userId: string,
+  promptId: string,
+  payload: UpdatePromptPayload,
+) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is suspended.");
+  }
+
+  if (user.status === "DELETED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+  }
+
+  const prompt = await prisma.prompt.findUnique({
+    where: { id: promptId },
+  });
+
+  if (!prompt) {
+    throw new AppError(httpStatus.NOT_FOUND, "Prompt not found!");
+  }
+
+  if (prompt.userId !== userId) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "You are not authorized to update this prompt!",
+    );
+  }
+
+  const result = await prisma.prompt.update({
+    where: { id: promptId },
+    data: payload,
+  });
+
+  return result;
+};
+
+const togglePromptPrivacy = async (userId: string, promptId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is suspended.");
+  }
+
+  if (user.status === "DELETED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+  }
+
+  const prompt = await prisma.prompt.findUnique({
+    where: { id: promptId },
+  });
+
+  if (!prompt) {
+    throw new AppError(httpStatus.NOT_FOUND, "Prompt not found!");
+  }
+
+  if (prompt.userId !== userId) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "You are not authorized to change privacy for this prompt!",
+    );
+  }
+
+  const result = await prisma.prompt.update({
+    where: { id: promptId },
+    data: {
+      isPublic: !prompt.isPublic,
+    },
+  });
+
+  return result;
+};
+
+
+const deletePrompt = async (userId: string, promptId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is suspended.");
+  }
+
+  if (user.status === "DELETED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+  }
+
+  const prompt = await prisma.prompt.findUnique({
+    where: { id: promptId },
+  });
+
+  if (!prompt) {
+    throw new AppError(httpStatus.NOT_FOUND, "Prompt not found!");
+  }
+
+  if (prompt.userId !== userId) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "You are not authorized to delete this prompt!",
+    );
+  }
+
+  await prisma.prompt.delete({
+    where: { id: promptId },
+  });
+
+  return null;
+};
+
 export const promptServices = {
   createPrompt,
   getAllPublicPrompts,
   getMyPrompts,
+  clonePromptToMyCollection,
+  updatePrompt,
+  togglePromptPrivacy,
+  deletePrompt
 };
