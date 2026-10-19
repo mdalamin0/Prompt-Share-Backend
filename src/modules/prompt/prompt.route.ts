@@ -7,11 +7,18 @@ import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
+router.get(
+  "/",
+  promptControllers.getAllPublicPrompts,
+);
+
 router.post(
   "/create",
   auth( Role.USER),
   validateRequest(createPromptValidationSchema),
   promptControllers.createPrompt,
 );
+
+
 
 export const promptRoutes = router;

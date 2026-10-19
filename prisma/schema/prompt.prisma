@@ -3,7 +3,7 @@ model Prompt {
   title       String   
   description String   
   template    String   
-  category    String   
+  category    PromptCategory  
   tags        String[] 
   isPublic    Boolean  @default(true)
   forkCount   Int      @default(0)
