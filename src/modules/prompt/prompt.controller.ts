@@ -22,6 +22,24 @@ const createPrompt = catchAsync(
   },
 );
 
+
+const getAllPublicPrompts = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const query = req.query;
+
+    const result = await promptServices.getAllPublicPrompts( query);
+
+    sendResponse(
+      res,
+      {
+        message: "Public prompts fetched successfully.",
+        data: result
+      },
+    );
+  },
+);
+
 export const promptControllers = {
   createPrompt,
+  getAllPublicPrompts,
 };

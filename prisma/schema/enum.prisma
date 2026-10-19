@@ -13,3 +13,9 @@ enum AuthProvider {
   CREDENTIAL
   GOOGLE
 }
+
+enum PromptCategory {
+  code
+  text
+  image
+}

@@ -1,3 +1,6 @@
+import { Prisma } from "../../../generated/prisma/client";
+import { IQuery } from "../../interfaces";
+
 export interface CreatePromptPayload {
   title: string;
   description: string;
@@ -6,3 +9,5 @@ export interface CreatePromptPayload {
   tags?: string[];
   isPublic?: boolean;
 }
+
+export type IPromptQuery = IQuery & Prisma.PromptWhereInput;
