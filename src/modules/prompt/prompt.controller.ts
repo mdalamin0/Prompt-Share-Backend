@@ -116,6 +116,22 @@ const deletePrompt = catchAsync(
   },
 );
 
+const getDashboardStats = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id as string;
+
+    const result = await promptServices.getDashboardStats(userId);
+
+    sendResponse(
+      res,
+      {
+        message: "Dashboard analytics stats fetched successfully.",
+        data: result,
+      }
+    );
+  },
+);
+
 export const promptControllers = {
   createPrompt,
   getAllPublicPrompts,
@@ -124,4 +140,5 @@ export const promptControllers = {
   updatePrompt,
   togglePromptPrivacy,
   deletePrompt,
+  getDashboardStats
 };
