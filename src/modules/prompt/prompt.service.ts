@@ -408,6 +408,50 @@ const deletePrompt = async (userId: string, promptId: string) => {
   return null;
 };
 
+const getDashboardStats = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is suspended.");
+  }
+
+  if (user.status === "DELETED") {
+    throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+  }
+
+  const totalPrompts = await prisma.prompt.count({
+    where: { userId },
+  });
+
+  const publicPrompts = await prisma.prompt.count({
+    where: { userId, isPublic: true },
+  });
+
+  const privatePrompts = await prisma.prompt.count({
+    where: { userId, isPublic: false },
+  });
+
+  const forkStats = await prisma.prompt.aggregate({
+    where: { userId },
+    _sum: {
+      forkCount: true,
+    },
+  });
+
+  return {
+    totalPrompts,
+    publicPrompts,
+    privatePrompts,
+    totalForksReceived: forkStats._sum.forkCount || 0,
+  };
+};
+
 export const promptServices = {
   createPrompt,
   getAllPublicPrompts,
@@ -415,5 +459,6 @@ export const promptServices = {
   clonePromptToMyCollection,
   updatePrompt,
   togglePromptPrivacy,
-  deletePrompt
+  deletePrompt,
+  getDashboardStats
 };

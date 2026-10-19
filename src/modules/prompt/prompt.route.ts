@@ -47,4 +47,10 @@ router.patch(
 router.delete("/:promptId", auth(Role.USER), promptControllers.deletePrompt);
 
 
+router.get(
+  "/dashboard-stats",
+  auth(Role.USER),
+  promptControllers.getDashboardStats,
+);
+
 export const promptRoutes = router;
