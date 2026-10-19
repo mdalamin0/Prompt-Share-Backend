@@ -12,6 +12,12 @@ router.get(
   promptControllers.getAllPublicPrompts,
 );
 
+router.get(
+  "/my-prompts",
+  auth(Role.USER),
+  promptControllers.getMyPrompts,
+);
+
 router.post(
   "/create",
   auth( Role.USER),
