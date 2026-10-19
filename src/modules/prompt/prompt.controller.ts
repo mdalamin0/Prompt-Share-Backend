@@ -39,7 +39,25 @@ const getAllPublicPrompts = catchAsync(
   },
 );
 
+const getMyPrompts = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id as string;
+    const query = req.query;
+
+    const result = await promptServices.getMyPrompts(userId, query);
+
+    sendResponse(
+      res,
+      {
+        message: "My prompts fetched successfully.",
+        data: result
+      },
+    );
+  },
+);
+
 export const promptControllers = {
   createPrompt,
   getAllPublicPrompts,
+  getMyPrompts,
 };
