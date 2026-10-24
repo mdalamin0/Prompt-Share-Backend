@@ -25,11 +25,31 @@ const createPrompt = catchAsync(
 const getAllPublicPrompts = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const query = req.query;
-
-    const result = await promptServices.getAllPublicPrompts(query);
+    const currentUserId = req.user?.id;
+    const result = await promptServices.getAllPublicPrompts(
+      query,
+      currentUserId as string,
+    );
 
     sendResponse(res, {
       message: "Public prompts fetched successfully.",
+      data: result,
+    });
+  },
+);
+
+const getPromptById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id as string;
+    const { promptId } = req.params;
+
+    const result = await promptServices.getPromptById(
+      promptId as string,
+      userId,
+    );
+
+    sendResponse(res, {
+      message: "Prompt fetched successfully.",
       data: result,
     });
   },
@@ -122,23 +142,21 @@ const getDashboardStats = catchAsync(
 
     const result = await promptServices.getDashboardStats(userId);
 
-    sendResponse(
-      res,
-      {
-        message: "Dashboard analytics stats fetched successfully.",
-        data: result,
-      }
-    );
+    sendResponse(res, {
+      message: "Dashboard analytics stats fetched successfully.",
+      data: result,
+    });
   },
 );
 
 export const promptControllers = {
   createPrompt,
   getAllPublicPrompts,
+  getPromptById,
   getMyPrompts,
   clonePromptToMyCollection,
   updatePrompt,
   togglePromptPrivacy,
   deletePrompt,
-  getDashboardStats
+  getDashboardStats,
 };

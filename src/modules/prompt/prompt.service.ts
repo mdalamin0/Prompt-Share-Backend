@@ -6,6 +6,24 @@ import { Prisma, PromptCategory } from "../../../generated/prisma/client";
 
 const createPrompt = async (userId: string, payload: CreatePromptPayload) => {
   const { title } = payload;
+  console.log(payload)
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
+    }
+
+    if (user.status === "SUSPENDED") {
+      throw new AppError(httpStatus.FORBIDDEN, "User is suspended.");
+    }
+
+    if (user.status === "DELETED") {
+      throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+    }
 
   const isTitleExists = await prisma.prompt.findFirst({
     where: {
@@ -35,6 +53,7 @@ const createPrompt = async (userId: string, payload: CreatePromptPayload) => {
 
 const getAllPublicPrompts = async (
   query: IPromptQuery,
+  currentUserId?: string,
 ) => {
   const limit = query.limit ? Number(query.limit) : 10;
   const page = query.page ? Number(query.page) : 1;
@@ -42,11 +61,17 @@ const getAllPublicPrompts = async (
   const sortBy = query.sortBy ? query.sortBy : "createdAt";
   const sortOrder = query.sortOrder ? query.sortOrder : "desc";
 
-
   const andConditions: Prisma.PromptWhereInput[] = [
     {
       isPublic: true,
-    }
+    },
+    {
+      NOT: {
+        title: {
+          endsWith: "(Copied)",
+        },
+      },
+    },
   ];
 
   if (query.searchTerm) {
@@ -73,13 +98,13 @@ const getAllPublicPrompts = async (
     });
   }
 
-   if (query.category) {
-     andConditions.push({
-       category: {
-         equals: query.category as PromptCategory,
-       },
-     });
-   }
+  if (query.category) {
+    andConditions.push({
+      category: {
+        equals: query.category as PromptCategory,
+      },
+    });
+  }
 
   const prompts = await prisma.prompt.findMany({
     where: {
@@ -109,8 +134,32 @@ const getAllPublicPrompts = async (
     },
   });
 
+  const promptsWithForkStatus = await Promise.all(
+    prompts.map(async (prompt) => {
+      let isForkedByCurrentUser = false;
+
+      if (currentUserId) {
+        const hasForked = await prisma.prompt.findFirst({
+          where: {
+            userId: currentUserId,
+            OR: [
+              { id: prompt.id },
+              { template: prompt.template }, 
+            ],
+          },
+        });
+        isForkedByCurrentUser = !!hasForked;
+      }
+
+      return {
+        ...prompt,
+        isForkedByCurrentUser,
+      };
+    }),
+  );
+
   return {
-    data: prompts,
+    data: promptsWithForkStatus,
     meta: {
       page,
       limit,
@@ -119,6 +168,50 @@ const getAllPublicPrompts = async (
     },
   };
 };
+
+
+export const getPromptById = async (
+  promptId: string,
+  userId: string,
+) => {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
+    }
+
+    if (user.status === "SUSPENDED") {
+      throw new AppError(httpStatus.FORBIDDEN, "User is suspended.");
+    }
+
+    if (user.status === "DELETED") {
+      throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+    }
+
+  const prompt = await prisma.prompt.findUnique({
+    where: {
+      id: promptId,
+    },
+  });
+
+  if (!prompt) {
+    throw new AppError(httpStatus.NOT_FOUND, "Prompt not found");
+  }
+
+  if (prompt.userId !== userId) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You do not have permission to access this prompt",
+    );
+  }
+
+  return prompt;
+};
+
 
 const getMyPrompts = async (userId: string, query: IPromptQuery) => {
   const limit = query.limit ? Number(query.limit) : 10;
@@ -455,6 +548,7 @@ const getDashboardStats = async (userId: string) => {
 export const promptServices = {
   createPrompt,
   getAllPublicPrompts,
+  getPromptById,
   getMyPrompts,
   clonePromptToMyCollection,
   updatePrompt,
