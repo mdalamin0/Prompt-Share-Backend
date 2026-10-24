@@ -169,7 +169,7 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
     await transporter.sendMail({
       from: config.email_sender,
       to: email,
-      subject: "Welcome To B7A6 Project",
+      subject: "Welcome To Prompt Share",
       html,
     });
   } catch (error) {
