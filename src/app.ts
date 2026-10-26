@@ -8,6 +8,7 @@ import { authRoutes } from "./modules/auth/auth.route";
 import "./config/passport";
 import { userRoutes } from "./modules/user/user.route";
 import { promptRoutes } from "./modules/prompt/prompt.route";
+import { chatRoutes } from "./modules/chat/chat.route";
 
 const app: Application = express();
 
@@ -37,6 +38,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/v1/auth", authRoutes)
 app.use("/api/v1/user", userRoutes)
 app.use("/api/v1/prompt", promptRoutes)
+app.use("/api/v1/chat", chatRoutes)
 
 
 app.use(notFound)

@@ -30,4 +30,8 @@ export default {
   cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
   cloudinary_api_key: process.env.CLOUDINARY_API_KEY!,
   cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET!,
+  gemini_api_key: process.env.GIMINI_API_KEY!,
+  groq_api_key: process.env.GROQ_API_KEY!,
+  ai_model_id: process.env.AI_MODEL_ID!,
+  hf_token: process.env.HF_TOKEN!,
 };
