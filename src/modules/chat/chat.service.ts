@@ -1,7 +1,10 @@
-import { Response } from "express";
 import Groq from "groq-sdk";
 import config from "../../config";
-import { IFrontendChatMessage, IGroqMessagePayload } from "./chat.interface";
+import {
+  IFrontendChatMessage,
+  IGroqMessagePayload,
+  IFlushableResponse,
+} from "./chat.interface";
 
 const groq = new Groq({
   apiKey: config.groq_api_key,
@@ -10,7 +13,7 @@ const groq = new Groq({
 const sendMessageStream = async (
   message: string,
   history: IFrontendChatMessage[] | undefined,
-  res: Response,
+  res: IFlushableResponse,
 ): Promise<void> => {
   try {
     const formattedMessages: IGroqMessagePayload[] = (history || []).map(
@@ -35,12 +38,12 @@ const sendMessageStream = async (
     });
 
     for await (const chunk of chatCompletionStream) {
-      const text = chunk.choices[0]?.delta?.content || "";
+      const text = chunk.choices?.[0]?.delta?.content || "";
       if (text) {
         res.write(`data: ${JSON.stringify({ text })}\n\n`);
 
-        if ((res as any).flush) {
-          (res as any).flush();
+        if (res.flush) {
+          res.flush();
         }
       }
     }

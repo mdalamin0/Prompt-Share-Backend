@@ -1,3 +1,5 @@
+import { Response } from "express";
+
 export interface IChatMessagePart {
   text: string;
 }
@@ -13,3 +15,6 @@ export interface IGroqMessagePayload {
   content: string;
 }
 
+export interface IFlushableResponse extends Response {
+  flush?: () => void;
+}
