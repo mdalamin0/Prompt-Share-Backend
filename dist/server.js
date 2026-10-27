@@ -40,7 +40,11 @@ var config_default = {
   email_sender: process.env.EMAIL_SENDER,
   cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
-  cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET
+  cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
+  gemini_api_key: process.env.GIMINI_API_KEY,
+  groq_api_key: process.env.GROQ_API_KEY,
+  ai_model_id: process.env.AI_MODEL_ID,
+  hf_token: process.env.HF_TOKEN
 };
 
 // src/app.ts
@@ -1930,6 +1934,90 @@ router3.patch(
 router3.delete("/:promptId", auth(Role.USER), promptControllers.deletePrompt);
 var promptRoutes = router3;
 
+// src/modules/chat/chat.route.ts
+import { Router as Router4 } from "express";
+import Groq2 from "groq-sdk";
+
+// src/modules/chat/chat.service.ts
+import Groq from "groq-sdk";
+var groq = new Groq({
+  apiKey: config_default.groq_api_key
+});
+var sendMessageStream = async (message, history, res) => {
+  try {
+    const formattedMessages = (history || []).map(
+      (item) => {
+        const textContent = item.parts?.[0]?.text || item.text || "";
+        return {
+          role: item.role === "user" ? "user" : "assistant",
+          content: textContent
+        };
+      }
+    );
+    formattedMessages.push({
+      role: "user",
+      content: message
+    });
+    const chatCompletionStream = await groq.chat.completions.create({
+      messages: formattedMessages,
+      model: config_default.ai_model_id,
+      stream: true
+    });
+    for await (const chunk of chatCompletionStream) {
+      const text = chunk.choices?.[0]?.delta?.content || "";
+      if (text) {
+        res.write(`data: ${JSON.stringify({ text })}
+
+`);
+        if (res.flush) {
+          res.flush();
+        }
+      }
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+    console.error("Groq Service Error:", error);
+    res.write(`data: ${JSON.stringify({ error: errorMessage })}
+
+`);
+  } finally {
+    res.end();
+  }
+};
+var chatServices = {
+  sendMessageStream
+};
+
+// src/modules/chat/chat.controller.ts
+var sendMessage = catchAsync(
+  async (req, res, next) => {
+    const { message, history } = req.body;
+    if (!message) {
+      return res.status(400).json({ success: false, error: "Message is required" });
+    }
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader(
+      "Cache-Control",
+      "no-cache, no-transform, private, must-revalidate"
+    );
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    await chatServices.sendMessageStream(message, history, res);
+  }
+);
+var chatControllers = {
+  sendMessage
+};
+
+// src/modules/chat/chat.route.ts
+var router4 = Router4();
+var groq2 = new Groq2({
+  apiKey: config_default.groq_api_key
+});
+router4.post("/send-message", chatControllers.sendMessage);
+var chatRoutes = router4;
+
 // src/app.ts
 var app = express();
 app.use(
@@ -1954,6 +2042,7 @@ app.get("/", (req, res) => {
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/prompt", promptRoutes);
+app.use("/api/v1/chat", chatRoutes);
 app.use(notFound);
 app.use(globalErrorHandler_default);
 var app_default = app;
